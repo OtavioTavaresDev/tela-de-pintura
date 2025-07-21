@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tela de Pintura Pixel Art</title>
+    
+    <!-- ==================== STYLE.CSS ==================== -->
+    <style>
+        :root {
+            --grid-cols: 15;
+            --grid-rows: 15;
+            --background-color: #f0f0f0;
+            --grid-bg-color: #ffffff;
+            --grid-gap: 1px;
+            --grid-border-color: #d1d5db;
+            --controls-bg-color: #ffffff;
+            --text-color: #1f2937;
+            --button-bg-color: #e5e7eb;
+            --button-hover-bg-color: #d1d5db;
+        }
+
+        /* Reset básico e estilo do corpo */
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent; /* Remove o flash azul ao tocar em links no mobile */
+        }
+
+        /* Container principal da aplicação */
+        .app-container {
+            width: 100%;
+            max-width: 500px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Seção de Controles (seletor de cor, botões) */
+        .controls {
+            background-color: var(--controls-bg-color);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Estilo customizado para o seletor de cores */
+        input[type="color"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            border: 2px solid var(--grid-border-color);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            background-color: transparent;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 0.375rem;
+        }
+        input[type="color"]::-moz-color-swatch {
+            border: none;
+            border-radius: 0.375rem;
+        }
+
+        .control-button {
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            background-color: var(--button-bg-color);
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .control-button:hover {
+            background-color: var(--button-hover-bg-color);
+        }
+
+        /* Container da grade de pintura */
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(var(--grid-cols), 1fr);
+            grid-template-rows: repeat(var(--grid-rows), 1fr);
+            gap: var(--grid-gap);
+            background-color: var(--grid-border-color);
+            border: 1px solid var(--grid-border-color);
+            width: 100%;
+            /* Mantém a proporção quadrada, responsiva */
+            aspect-ratio: var(--grid-cols) / var(--grid-rows);
+            touch-action: none; /* Essencial para uma boa experiência de toque */
+            user-select: none; /* Evita seleção de texto ao arrastar */
+            -webkit-user-select: none;
+        }
+
+        /* Células individuais da grade */
+        .grid-cell {
+            background-color: var(--grid-bg-color);
+            transition: background-color 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== INDEX.HTML ==================== -->
+    <main class="app-container">
+        <!-- Controles -->
+        <div class="controls">
+            <div class="color-picker-wrapper">
+                <label for="colorPicker" class="font-semibold">Cor:</label>
+                <input type="color" id="colorPicker" value="#3b82f6">
+            </div>
+            <button id="clearBtn" class="control-button">Limpar Tudo</button>
+        </div>
+
+        <!-- Grade de Pintura -->
+        <div id="grid-container"></div>
+    </main>
+
+    <!-- ==================== SCRIPT.JS ==================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIGURAÇÕES E ESTADO DA APLICAÇÃO ---
+            const GRID_CONFIG = {
+                COLS: 15, // Altere aqui para mais colunas
+                ROWS: 15, // Altere aqui para mais linhas
+            };
+            
+            let isPainting = false;
+            let currentColor = '#3b82f6'; // Cor inicial
+
+            // --- ELEMENTOS DO DOM ---
+            const gridContainer = document.getElementById('grid-container');
+            const colorPicker = document.getElementById('colorPicker');
+            const clearBtn = document.getElementById('clearBtn');
+            const root = document.documentElement;
+
+            /**
+             * Cria a grade de pintura com base na configuração.
+             */
+            function createGrid() {
+                // Limpa a grade antiga antes de criar uma nova
+                gridContainer.innerHTML = '';
+
+                // Atualiza as variáveis CSS para o layout da grade
+                root.style.setProperty('--grid-cols', GRID_CONFIG.COLS);
+                root.style.setProperty('--grid-rows', GRID_CONFIG.ROWS);
+                // A proporção agora é baseada nas novas colunas e linhas
+                root.style.setProperty('aspect-ratio', `${GRID_CONFIG.COLS} / ${GRID_CONFIG.ROWS}`);
+
+
+                // Cria cada célula e a adiciona ao container
+                for (let i = 0; i < GRID_CONFIG.COLS * GRID_CONFIG.ROWS; i++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('grid-cell');
+                    gridContainer.appendChild(cell);
+                }
+            }
+
+            /**
+             * Pinta uma célula com a cor atualmente selecionada.
+             * @param {HTMLElement} cell - O elemento da célula a ser pintado.
+             */
+            function paintCell(cell) {
+                if (cell && cell.classList.contains('grid-cell')) {
+                    cell.style.backgroundColor = currentColor;
+                }
+            }
+
+            // --- LÓGICA DE EVENTOS ---
+
+            // Atualiza a cor quando o seletor é alterado
+            colorPicker.addEventListener('input', (e) => {
+                currentColor = e.target.value;
+            });
+
+            // Limpa a grade, restaurando a cor de fundo padrão
+            clearBtn.addEventListener('click', () => {
+                const cells = gridContainer.querySelectorAll('.grid-cell');
+                cells.forEach(cell => {
+                    cell.style.backgroundColor = ''; // Reseta para o CSS padrão
+                });
+            });
+
+            // --- MANIPULADORES DE EVENTOS DE PINTURA (MOUSE E TOQUE) ---
+
+            // Inicia a pintura (mouse pressionado)
+            gridContainer.addEventListener('mousedown', (e) => {
+                e.preventDefault(); // Evita comportamento padrão do navegador
+                isPainting = true;
+                paintCell(e.target);
+            });
+
+            // Pinta enquanto o mouse se move (se estiver pressionado)
+            gridContainer.addEventListener('mousemove', (e) => {
+                if (isPainting) {
+                    paintCell(e.target);
+                }
+            });
+
+            // Para a pintura (mouse liberado)
+            document.addEventListener('mouseup', () => {
+                isPainting = false;
+            });
+
+            // Para a pintura se o mouse sair da janela do navegador
+            gridContainer.addEventListener('mouseleave', () => {
+                isPainting = false;
+            });
+
+
+            // Inicia a pintura (toque na tela)
+            gridContainer.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                isPainting = true;
+                const touch = e.touches[0];
+                const targetCell = document.elementFromPoint(touch.clientX, touch.clientY);
+                paintCell(targetCell);
+            }, { passive: false });
+
+            // Pinta enquanto o dedo desliza
+            gridContainer.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (isPainting) {
+                    const touch = e.touches[0];
+                    const targetCell = document.elementFromPoint(touch.clientX, touch.clientY);
+                    paintCell(targetCell);
+                }
+            }, { passive: false });
+
+            // Para a pintura (dedo retirado da tela)
+            gridContainer.addEventListener('touchend', () => {
+                isPainting = false;
+            });
+            
+            // Para a pintura se o toque for cancelado
+            gridContainer.addEventListener('touchcancel', () => {
+                isPainting = false;
+            });
+
+
+            // --- INICIALIZAÇÃO ---
+            createGrid();
+        });
+    </script>
+</body>
+</html>
